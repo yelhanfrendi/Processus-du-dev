@@ -1,5 +1,5 @@
 import streamlit as st
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw, ImageFont
 import io
 import os
 import cv2
@@ -35,6 +35,31 @@ def apply_sepia(image):
             sepia_filter.putpixel((px, py), (tr, tg, tb))
     return sepia_filter
 
+def rajouter_text(image):
+    # Superposer le texte sur l'image traitée
+    draw = ImageDraw.Draw(image)
+    # Définir la police et la taille du texte
+    font = ImageFont.truetype("arial.ttf", 20)  # Modifier le chemin de la police si nécessaire
+
+    # Obtenir le texte à superposer sur l'image depuis la zone de saisie de texte
+    texte = st.text_input("Entrez le texte à superposer sur l'image")
+
+    # Option pour la position du texte
+    position_option = st.selectbox("Choisissez la position du texte", ["Haut", "Milieu", "Bas"])
+
+    # Calculer la position du texte en fonction de l'option sélectionnée
+    if position_option == "Haut":
+        position = (10, 10)  # Haut : Position fixe à partir du coin supérieur gauche
+    elif position_option == "Milieu":
+        width, height = image.size
+        position = (10, height // 2)  # Milieu : Verticalement au milieu, à 10 pixels de la gauche
+    elif position_option == "Bas":
+        width, height = image.size
+        position = (10, height - 30)  # Bas : Position fixe à partir du coin inférieur gauche, en supposant que 30 pixels suffisent pour la hauteur du texte
+
+    # Dessiner le texte sur l'image
+    draw.text(position, texte, fill="red", font=font)
+    return image
 
 def reframe_img_cv2(img, scale_percent):
     """
@@ -109,7 +134,7 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption='Image originale', use_column_width=True)
     
-    traitement_options = ['Rotation', 'Redimensionner', 'Noir et Blanc', 'Sépia', 'Flou','Découpe']
+    traitement_options = ['Rajouter un texte','Rotation', 'Redimensionner', 'Noir et Blanc', 'Sépia', 'Flou','Découpe']
     choix_traitements = st.multiselect('Choisissez les traitements à appliquer:', traitement_options)
 
     if choix_traitements:
@@ -156,12 +181,13 @@ if uploaded_file is not None:
                 if isinstance(image_modifiee, np.ndarray):
                     image_modifiee = Image.fromarray(image_modifiee)
                 image_modifiee = apply_sepia(image_modifiee)
-                st.image(image_modifiee, caption='Après application du filtre Sépia', use_column_width=True)
-                
+                st.image(image_modifiee, caption='Après application du filtre Sépia', use_column_width=True)  
             elif traitement == 'Flou':
                 image_modifiee = apply_blur(image_modifiee)
                 st.image(image_modifiee, caption='Après application du flou', use_column_width=True)
-                
+            elif traitement == 'Rajouter un texte':
+                image_modifiee = rajouter_text(image_modifiee)
+                st.image(image_modifiee, caption='Après application de rajouter un texte', use_column_width=True)                
         # Option pour télécharger l'image finale
         img_byte_arr = io.BytesIO()
         image_modifiee.save(img_byte_arr, format='PNG')
